@@ -2,6 +2,8 @@
 
 English | [简体中文](README_zh.md)
 
+> 🚀 Supercharge your Cursor IDE experience! This extension automatically accepts AI suggestions, making your coding flow seamless and efficient. Perfect for developers who trust Cursor's AI and want to speed up their coding process.
+
 A VS Code extension that automatically accepts and runs Cursor AI suggestions to improve your coding efficiency.
 
 ## Installation
