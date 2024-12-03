@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>VS Code Auto Accept Injector</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #007acc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        button:hover {
+            background: #005999;
+        }
+        pre {
+            background: #fff;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .instructions {
+            background: #e8f5ff;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>VS Code Auto Accept Injector</h1>
+    
+    <div class="instructions">
+        <h3>Instructions:</h3>
+        <ol>
+            <li>Open Developer Tools in VS Code (Mac: Cmd+Option+I, Windows: Ctrl+Shift+I)</li>
+            <li>Switch to Console panel</li>
+            <li>Click the "Copy Code" button below</li>
+            <li>Paste and run the code in Console</li>
+        </ol>
+    </div>
+
+    <button onclick="copyCode()">Copy Auto Accept Code</button>
+    <button onclick="copyBookmarklet()">Copy Bookmarklet Code</button>
+
+    <h3>Auto Accept Code:</h3>
+    <pre id="codeBlock"></pre>
+
+    <h3>Bookmarklet Code:</h3>
+    <pre id="bookmarkletBlock"></pre>
+
+    <script>
+        // Read auto_accept.js content
+        const autoAcceptCode = `class AutoAccept {
+    constructor(interval = 10000) {
+        this.interval = interval;
+        this.monitorInterval = null;
+        this.isRunning = false;
+        this.lastStatus = null;
+        this.hasAlertedComplete = false;
+        this.log('AutoAccept initialized');
+        this.start();
+    }
+
+    log(message, type = 'info') {
+        const timestamp = new Date().toISOString();
+        const prefix = '[AutoAccept]';
+        const fullMessage = \`\${prefix} \${timestamp} - \${message}\`;
+        try {
+            window.postMessage({ type: 'log', message: fullMessage }, '*');
+            console.debug(fullMessage);
+            if (type === 'error') {
+                console.trace(fullMessage);
+            } else {
+                console.debug(fullMessage);
+            }
+        } catch (e) {
+            console.log(fullMessage);
+        }
+    }
+
+    start() {
+        if (this.isRunning) {
+            this.log('Auto accept is already running');
+            return false;
+        }
+        this.log('Starting auto accept...');
+        this.checkAndAccept();
+        this.monitorInterval = setInterval(() => {
+            this.checkAndAccept();
+        }, this.interval);
+        this.isRunning = true;
+        this.log(\`Auto accept started, checking every \${this.interval/1000} seconds\`);
+        return true;
+    }
+
+    stop() {
+        if (!this.isRunning) {
+            this.log('Auto accept is not started');
+            return false;
+        }
+        clearInterval(this.monitorInterval);
+        this.monitorInterval = null;
+        this.isRunning = false;
+        this.log('Auto accept stopped');
+        return true;
+    }
+
+    textIncludes(text, target) {
+        return text.toLowerCase().includes(target.toLowerCase());
+    }
+
+    getCurrentStatus(content) {
+        if (this.textIncludes(content, 'generating')) {
+            return 'generating';
+        }
+        if (this.textIncludes(content, 'completed')) {
+            return 'completed';
+        }
+        return 'unknown';
+    }
+
+    checkStatus(element) {
+        try {
+            if (!element) return;
+            
+            const content = element.textContent || '';
+            const currentStatus = this.getCurrentStatus(content);
+            
+            if (this.lastStatus !== currentStatus && currentStatus !== 'completed') {
+                this.hasAlertedComplete = false;
+                this.log(\`Status changed from \${this.lastStatus} to \${currentStatus}, reset complete reminder\`);
+            }
+
+            this.lastStatus = currentStatus;
+
+            switch (currentStatus) {
+                case 'generating':
+                    this.log('Current status: generating');
+                    break;
+                case 'completed':
+                    if (!this.hasAlertedComplete) {
+                        this.log('Current status: completed', 'info');
+                        alert('Task completed (completed)');
+                        this.hasAlertedComplete = true;
+                    }
+                    break;
+                case 'unknown':
+                    this.log('Current status: unknown');
+                    break;
+            }
+
+            return currentStatus;
+        } catch (error) {
+            this.log(\`Error checking status: \${error.message}\`, 'error');
+            return 'error';
+        }
+    }
+
+    triggerClick(element) {
+        const rect = element.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+
+        const mousedownEvent = new MouseEvent('mousedown', {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+            button: 0,
+            buttons: 1,
+            clientX: centerX,
+            clientY: centerY,
+            screenX: centerX,
+            screenY: centerY,
+            detail: 1,
+            isTrusted: true
+        });
+
+        element.dispatchEvent(mousedownEvent);
+        this.log(\`Trigger accept event: \${element.textContent.trim()}\`);
+    }
+
+    checkAndAccept() {
+        try {
+            const inputBox = document.querySelector('div.full-input-box');
+            if (!inputBox) {
+                this.log('Input-box not found');
+                return;
+            }
+
+            let previousSibling = inputBox.previousElementSibling;
+            if (!previousSibling) {
+                this.log('Previous sibling not found');
+                return;
+            }
+
+            const status = this.checkStatus(previousSibling);
+            if (status === 'completed') return;
+
+            const buttons = previousSibling.querySelectorAll('div.cursor-button-primary');
+            if (!buttons || buttons.length === 0) {
+                this.log('No buttons found');
+                return;
+            }
+
+            buttons.forEach(button => {
+                const buttonText = button.textContent.trim();
+                if (this.textIncludes(buttonText, 'Run command') || 
+                    this.textIncludes(buttonText, 'Accept')) {
+                    window.targetButton = button;
+                    this.log(\`Found button: \${buttonText}\`);
+                    this.triggerClick(button);
+                }
+            });
+        } catch (error) {
+            this.log(\`Execution error: \${error.message}\`, 'error');
+        }
+    }
+
+    getStatus() {
+        const status = {
+            isRunning: this.isRunning,
+            interval: this.interval,
+            intervalSeconds: this.interval / 1000,
+            lastStatus: this.lastStatus,
+            hasAlertedComplete: this.hasAlertedComplete
+        };
+        this.log(\`Current status: \${JSON.stringify(status)}\`);
+        return status;
+    }
+
+    setInterval(newInterval) {
+        if (typeof newInterval !== 'number' || newInterval < 1000) {
+            this.log('Interval must be a number greater than or equal to 1000 (milliseconds)', 'error');
+            return false;
+        }
+
+        this.interval = newInterval;
+        if (this.isRunning) {
+            this.stop();
+            this.start();
+        }
+        this.log(\`Check interval updated to \${newInterval/1000} seconds\`);
+        return true;
+    }
+}
+
+window.autoAccept = new AutoAccept();`;
+
+        // Create bookmarklet code
+        const bookmarkletCode = `javascript:(function(){
+            const script = document.createElement('script');
+            script.textContent = \`${autoAcceptCode}\`;
+            document.body.appendChild(script);
+        })()`;
+
+        // Display code
+        document.getElementById('codeBlock').textContent = autoAcceptCode;
+        document.getElementById('bookmarkletBlock').textContent = bookmarkletCode;
+
+        // Copy code to clipboard
+        function copyCode() {
+            navigator.clipboard.writeText(autoAcceptCode)
+                .then(() => alert('Auto accept code copied to clipboard!'))
+                .catch(err => alert('Copy failed: ' + err));
+        }
+
+        // Copy bookmarklet code to clipboard
+        function copyBookmarklet() {
+            navigator.clipboard.writeText(bookmarkletCode)
+                .then(() => alert('Bookmarklet code copied to clipboard!'))
+                .catch(err => alert('Copy failed: ' + err));
+        }
+    </script>
+</body>
+</html> 

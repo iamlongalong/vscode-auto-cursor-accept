@@ -1,0 +1,43 @@
+{
+  "name": "vscode-auto-cursor-accept",
+  "displayName": "VS Code Auto Cursor Accept",
+  "description": "Automatically accept and run Cursor AI suggestions",
+  "version": "1.0.1",
+  "publisher": "iamlongalong",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "extension.startAutoAccept",
+        "title": "Start Auto Accept"
+      }
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/iamlongalong/vscode-auto-cursor-accept"
+  },
+  "keywords": [
+    "cursor",
+    "auto-accept",
+    "ai",
+    "productivity"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  }
+}
